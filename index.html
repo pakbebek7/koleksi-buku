@@ -316,12 +316,43 @@
   </header>
 
   <div class="file-bar">
+    <button class="chip" id="githubBtn">🐙 Hubungkan ke GitHub</button>
+    <button class="chip" id="linkFileBtn">🔗 Hubungkan File Otomatis</button>
     <button class="chip" id="exportBtn">⬇ Simpan Koleksi ke File</button>
     <label class="chip file-label" for="importFile">⬆ Muat Koleksi dari File</label>
     <input type="file" id="importFile" accept=".json" hidden>
     <button class="chip" id="exportXlsxBtn">📊 Unduh sebagai Excel</button>
-    <span class="file-hint">Data hanya tersimpan selama tab ini terbuka — simpan ke file agar tidak hilang.</span>
+    <span class="file-hint" id="fileHint">Tersimpan otomatis di browser ini. Gunakan tombol simpan/muat untuk cadangan atau pindah perangkat.</span>
   </div>
+
+  <div class="card-form" id="githubPanel" style="display:none;">
+    <div class="form-grid">
+      <div>
+        <label for="ghToken">Personal Access Token</label>
+        <input id="ghToken" type="password" placeholder="ghp_xxxxxxxxxxxx">
+      </div>
+      <div>
+        <label for="ghRepo">Repository (owner/nama-repo)</label>
+        <input id="ghRepo" type="text" placeholder="mis. budi/koleksi-buku">
+      </div>
+      <div>
+        <label for="ghBranch">Branch</label>
+        <input id="ghBranch" type="text" placeholder="main" value="main">
+      </div>
+      <div class="full">
+        <label for="ghPath">Nama File di Repo</label>
+        <input id="ghPath" type="text" placeholder="koleksi-buku.json" value="koleksi-buku.json">
+      </div>
+    </div>
+    <div class="form-actions" style="justify-content:space-between; align-items:center;">
+      <span class="file-hint" id="ghStatus"></span>
+      <div style="display:flex; gap:8px;">
+        <button class="link-btn" id="ghDisconnectBtn" style="text-transform:uppercase; font-family:'Courier New',monospace;">Putuskan</button>
+        <button id="ghConnectBtn">Hubungkan &amp; Muat</button>
+      </div>
+    </div>
+  </div>
+
 
   <div class="card-form">
     <div class="form-grid">
@@ -395,16 +426,235 @@ document.getElementById('viewListBtn').addEventListener('click', ()=>{
 
 
 
+const STORAGE_KEY = 'koleksi-buku-mandiri-v1';
+let autoSaveActive = true;
+let linkedFileHandle = null;
+
+const fileHint = document.getElementById('fileHint');
+const linkFileBtn = document.getElementById('linkFileBtn');
+const fsApiSupported = 'showSaveFilePicker' in window;
+
+if(!fsApiSupported){
+  linkFileBtn.disabled = true;
+  linkFileBtn.title = 'Fitur ini hanya didukung di Chrome, Edge, atau Brave.';
+  linkFileBtn.style.opacity = '0.5';
+  linkFileBtn.style.cursor = 'not-allowed';
+}
+
+linkFileBtn.addEventListener('click', async ()=>{
+  if(!fsApiSupported){
+    alert('Fitur "Hubungkan File Otomatis" hanya didukung di browser berbasis Chromium (Chrome, Edge, Brave). Gunakan tombol simpan/muat manual sebagai gantinya.');
+    return;
+  }
+  try{
+    linkedFileHandle = await window.showSaveFilePicker({
+      suggestedName: 'koleksi-buku.json',
+      types: [{ description: 'File JSON', accept: {'application/json': ['.json']} }]
+    });
+    // Jika file yang dipilih sudah punya isi, muat datanya
+    try{
+      const existingFile = await linkedFileHandle.getFile();
+      const text = await existingFile.text();
+      if(text.trim()){
+        const data = JSON.parse(text);
+        if(Array.isArray(data)) books = data;
+      }
+    }catch(e){ /* file kosong/baru, biarkan koleksi saat ini */ }
+
+    await writeToLinkedFile();
+    linkFileBtn.textContent = `✅ Tersambung: ${linkedFileHandle.name}`;
+    fileHint.textContent = 'Setiap perubahan otomatis ditulis ke file yang terhubung.';
+    render();
+  }catch(e){
+    // Pengguna membatalkan dialog pemilihan file — tidak perlu ditindaklanjuti
+  }
+});
+
+async function writeToLinkedFile(){
+  if(!linkedFileHandle) return;
+  try{
+    const writable = await linkedFileHandle.createWritable();
+    await writable.write(JSON.stringify(books, null, 2));
+    await writable.close();
+  }catch(e){
+    fileHint.textContent = 'Gagal menulis ke file yang terhubung. Coba hubungkan ulang.';
+  }
+}
+
 function loadBooks(){
-  // Versi mandiri: tidak ada penyimpanan otomatis di server.
-  books = [];
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    books = saved ? JSON.parse(saved) : [];
+  }catch(e){
+    // localStorage tidak tersedia (mis. saat pratinjau di dalam Claude.ai)
+    books = [];
+    autoSaveActive = false;
+    showAutoSaveWarning();
+  }
   loaded = true;
   render();
 }
 
 function saveBooks(){
-  // Tidak ada auto-save di versi mandiri.
-  // Gunakan tombol "Simpan Koleksi ke File" untuk menyimpan secara manual.
+  if(autoSaveActive){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
+    }catch(e){
+      autoSaveActive = false;
+      showAutoSaveWarning();
+    }
+  }
+  writeToLinkedFile();
+  ghSaveIfConnected();
+}
+
+function showAutoSaveWarning(){
+  fileHint.textContent = 'Auto-save browser tidak tersedia di lingkungan ini — gunakan tombol simpan/muat file secara manual.';
+}
+
+/* ===== Integrasi GitHub (Contents API) ===== */
+const GH_CONFIG_KEY = 'koleksi-buku-github-config';
+let ghConfig = null; // { token, repo, branch, path }
+let ghSha = null;    // sha file saat ini di GitHub, dipakai untuk update
+let ghBusy = false;
+let ghQueued = false;
+
+const githubBtn = document.getElementById('githubBtn');
+const githubPanel = document.getElementById('githubPanel');
+const ghStatus = document.getElementById('ghStatus');
+
+function utf8ToBase64(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function base64ToUtf8(b64){
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+githubBtn.addEventListener('click', ()=>{
+  githubPanel.style.display = githubPanel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('ghDisconnectBtn').addEventListener('click', ()=>{
+  ghConfig = null;
+  ghSha = null;
+  try{ localStorage.removeItem(GH_CONFIG_KEY); }catch(e){}
+  githubBtn.textContent = '🐙 Hubungkan ke GitHub';
+  ghStatus.textContent = 'Terputus dari GitHub.';
+  document.getElementById('ghToken').value = '';
+});
+
+document.getElementById('ghConnectBtn').addEventListener('click', async ()=>{
+  const token = document.getElementById('ghToken').value.trim();
+  const repo = document.getElementById('ghRepo').value.trim();
+  const branch = document.getElementById('ghBranch').value.trim() || 'main';
+  const path = document.getElementById('ghPath').value.trim() || 'koleksi-buku.json';
+
+  if(!token || !repo){
+    ghStatus.textContent = 'Isi token dan repository terlebih dahulu.';
+    return;
+  }
+
+  ghConfig = { token, repo, branch, path };
+  ghStatus.textContent = 'Menghubungkan…';
+
+  const result = await ghLoadFromRepo();
+  if(result.ok){
+    try{ localStorage.setItem(GH_CONFIG_KEY, JSON.stringify(ghConfig)); }catch(e){}
+    githubBtn.textContent = `✅ GitHub: ${repo}`;
+    ghStatus.textContent = result.message;
+    render();
+  }else{
+    ghStatus.textContent = result.message;
+    ghConfig = null;
+  }
+});
+
+async function ghLoadFromRepo(){
+  const { token, repo, branch, path } = ghConfig;
+  const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+  try{
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json'
+      }
+    });
+    if(res.status === 404){
+      // File belum ada — akan dibuat saat pertama kali menyimpan
+      ghSha = null;
+      return { ok:true, message: 'Terhubung. File belum ada, akan dibuat saat pertama menyimpan.' };
+    }
+    if(!res.ok){
+      const errBody = await res.json().catch(()=>({}));
+      return { ok:false, message: `Gagal terhubung (${res.status}): ${errBody.message || 'Periksa token/repo/branch.'}` };
+    }
+    const data = await res.json();
+    ghSha = data.sha;
+    const content = base64ToUtf8(data.content.replace(/\n/g,''));
+    const parsed = JSON.parse(content);
+    if(Array.isArray(parsed)) books = parsed;
+    return { ok:true, message: `Terhubung. Koleksi dimuat dari ${repo}.` };
+  }catch(e){
+    return { ok:false, message: 'Gagal terhubung. Periksa koneksi internet atau token.' };
+  }
+}
+
+async function ghSaveIfConnected(){
+  if(!ghConfig) return;
+  if(ghBusy){ ghQueued = true; return; }
+  ghBusy = true;
+  const { token, repo, branch, path } = ghConfig;
+  const url = `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}`;
+  const body = {
+    message: 'Update koleksi buku',
+    content: utf8ToBase64(JSON.stringify(books, null, 2)),
+    branch
+  };
+  if(ghSha) body.sha = ghSha;
+
+  try{
+    ghStatus.textContent = 'Menyimpan ke GitHub…';
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok){
+      ghSha = data.content ? data.content.sha : ghSha;
+      ghStatus.textContent = `Tersimpan ke GitHub (${new Date().toLocaleTimeString('id-ID')}).`;
+    }else{
+      ghStatus.textContent = `Gagal menyimpan (${res.status}): ${data.message || 'coba lagi.'}`;
+    }
+  }catch(e){
+    ghStatus.textContent = 'Gagal menyimpan ke GitHub. Periksa koneksi internet.';
+  }
+  ghBusy = false;
+  if(ghQueued){
+    ghQueued = false;
+    ghSaveIfConnected();
+  }
+}
+
+async function ghAutoReconnect(){
+  try{
+    const saved = localStorage.getItem(GH_CONFIG_KEY);
+    if(!saved) return;
+    ghConfig = JSON.parse(saved);
+    document.getElementById('ghToken').value = ghConfig.token;
+    document.getElementById('ghRepo').value = ghConfig.repo;
+    document.getElementById('ghBranch').value = ghConfig.branch;
+    document.getElementById('ghPath').value = ghConfig.path;
+    ghStatus.textContent = 'Menyambungkan ulang ke GitHub…';
+    const result = await ghLoadFromRepo();
+    githubBtn.textContent = result.ok ? `✅ GitHub: ${ghConfig.repo}` : '🐙 Hubungkan ke GitHub';
+    ghStatus.textContent = result.message;
+    render();
+  }catch(e){ /* abaikan, biarkan pengguna hubungkan manual */ }
 }
 
 document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
@@ -610,6 +860,7 @@ function escapeHtml(str){
 }
 
 loadBooks();
+ghAutoReconnect();
 </script>
 </body>
 </html>
