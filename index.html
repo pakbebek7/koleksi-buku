@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Katalog Koleksi Buku (Mandiri)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#EDE6D6;
+    --paper-dark:#E2D8C2;
+    --ink:#28324A;
+    --forest:#1F3A2E;
+    --forest-light:#2C4F3D;
+    --brass:#B08D57;
+    --brass-light:#C9A876;
+    --red-tab:#8C3B32;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px);
+    color:var(--ink);
+    font-family:'Georgia', 'Iowan Old Style', serif;
+    min-height:100vh;
+  }
+  .wrap{ max-width:920px; margin:0 auto; padding:36px 20px 60px; }
+
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px double var(--forest);
+    padding-bottom:14px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  h1{
+    font-size:1.9rem;
+    letter-spacing:0.03em;
+    margin:0;
+    color:var(--forest);
+    font-weight:700;
+  }
+  .subtitle{
+    font-family:'Courier New', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--brass);
+  }
+  .count{
+    font-family:'Courier New', monospace;
+    font-size:0.85rem;
+    color:var(--forest-light);
+  }
+
+  /* form card */
+  .card-form{
+    background:var(--paper-dark);
+    border:1px solid var(--brass-light);
+    border-radius:2px;
+    padding:20px 22px;
+    margin-bottom:30px;
+    position:relative;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.04);
+  }
+  .card-form::before{
+    content:"";
+    position:absolute; left:0; top:14px; bottom:14px; width:4px;
+    background:var(--red-tab);
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:2fr 1.3fr 1fr;
+    gap:12px 14px;
+  }
+  .form-grid .full{ grid-column:1/-1; }
+  label{
+    display:block;
+    font-family:'Courier New', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--forest-light);
+    margin-bottom:4px;
+  }
+  input, select{
+    width:100%;
+    font-family:Georgia, serif;
+    font-size:0.95rem;
+    padding:8px 9px;
+    border:1px solid #b9ac8e;
+    border-radius:2px;
+    background:#FBF8F0;
+    color:var(--ink);
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--forest-light);
+    outline-offset:1px;
+  }
+  .form-actions{
+    margin-top:16px;
+    display:flex;
+    justify-content:flex-end;
+  }
+  button{
+    font-family:'Courier New', monospace;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-size:0.8rem;
+    background:var(--forest);
+    color:var(--paper);
+    border:none;
+    padding:10px 20px;
+    border-radius:2px;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  button:hover{ background:var(--forest-light); }
+  button:focus-visible{ outline:2px solid var(--brass); outline-offset:2px; }
+
+  .file-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .file-label{
+    display:inline-block;
+  }
+  .file-hint{
+    font-family:'Courier New', monospace;
+    font-size:0.68rem;
+    color:#8a7a5f;
+    font-style:italic;
+  }
+
+  /* filters */
+  .filters{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .filters input[type=search]{
+    flex:1;
+    min-width:160px;
+  }
+  .chip{
+    font-family:'Courier New', monospace;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    padding:7px 12px;
+    border:1px solid var(--forest-light);
+    border-radius:20px;
+    background:transparent;
+    color:var(--forest);
+    cursor:pointer;
+  }
+  .chip.active{
+    background:var(--forest);
+    color:var(--paper);
+  }
+
+  /* book grid */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    gap:16px;
+  }
+  .book{
+    background:#FBF8F0;
+    border:1px solid #d8cba9;
+    border-radius:2px;
+    padding:16px 16px 14px;
+    position:relative;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .book::before{
+    content:"";
+    position:absolute; top:0; right:14px;
+    width:18px; height:24px;
+    background:var(--red-tab);
+    clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);
+  }
+  .book-title{
+    font-size:1.05rem;
+    font-weight:700;
+    color:var(--forest);
+    padding-right:26px;
+    line-height:1.25;
+  }
+  .book-author{
+    font-style:italic;
+    font-size:0.88rem;
+    color:#5b5040;
+  }
+  .book-meta{
+    font-family:'Courier New', monospace;
+    font-size:0.7rem;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-top:2px;
+  }
+  .status-badge{
+    align-self:flex-start;
+    font-family:'Courier New', monospace;
+    font-size:0.65rem;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border-radius:10px;
+    margin-top:4px;
+  }
+  .status-dibaca{ background:#e4d9b8; color:#6b5223; }
+  .status-selesai{ background:#d8e6d9; color:var(--forest); }
+  .status-rencana{ background:#e6dcd0; color:#7a6a55; }
+
+  .book-location{
+    font-family:'Courier New', monospace;
+    font-size:0.72rem;
+    color:#5b5040;
+    margin-top:2px;
+  }
+  .book-actions{
+    margin-top:auto;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    padding-top:8px;
+  }
+  .link-btn{
+    background:none;
+    border:none;
+    color:#8a7a5f;
+    font-family:'Courier New', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:2px 0;
+  }
+  .link-btn:hover{ color:var(--red-tab); }
+
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:#8a7a5f;
+    font-style:italic;
+  }
+  .loading{
+    text-align:center;
+    padding:40px;
+    color:#8a7a5f;
+    font-family:'Courier New', monospace;
+    font-size:0.85rem;
+  }
+
+  /* list/table view */
+  .view-toggle{
+    display:flex;
+    gap:6px;
+  }
+  table.book-table{
+    width:100%;
+    border-collapse:collapse;
+    background:#FBF8F0;
+    border:1px solid #d8cba9;
+  }
+  table.book-table th{
+    text-align:left;
+    font-family:'Courier New', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--paper);
+    background:var(--forest);
+    padding:9px 10px;
+  }
+  table.book-table td{
+    padding:9px 10px;
+    border-bottom:1px solid #e6dcc4;
+    font-size:0.9rem;
+    vertical-align:middle;
+  }
+  table.book-table tr:last-child td{ border-bottom:none; }
+  table.book-table tr:hover td{ background:#F4EFE1; }
+  table.book-table .col-title{ font-weight:700; color:var(--forest); }
+  table.book-table .col-author{ font-style:italic; color:#5b5040; }
+  table.book-table .row-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Katalog Koleksi Buku</h1>
+      <div class="subtitle">Perpustakaan Pribadi</div>
+    </div>
+    <div class="count" id="countLabel">memuat…</div>
+  </header>
+
+  <div class="file-bar">
+    <button class="chip" id="exportBtn">⬇ Simpan Koleksi ke File</button>
+    <label class="chip file-label" for="importFile">⬆ Muat Koleksi dari File</label>
+    <input type="file" id="importFile" accept=".json" hidden>
+    <button class="chip" id="exportXlsxBtn">📊 Unduh sebagai Excel</button>
+    <span class="file-hint">Data hanya tersimpan selama tab ini terbuka — simpan ke file agar tidak hilang.</span>
+  </div>
+
+  <div class="card-form">
+    <div class="form-grid">
+      <div class="full">
+        <label for="fTitle">Judul Buku</label>
+        <input id="fTitle" type="text" placeholder="mis. Laskar Pelangi">
+      </div>
+      <div>
+        <label for="fAuthor">Penulis</label>
+        <input id="fAuthor" type="text" placeholder="mis. Andrea Hirata">
+      </div>
+      <div>
+        <label for="fGenre">Genre</label>
+        <input id="fGenre" type="text" placeholder="mis. Fiksi">
+      </div>
+      <div>
+        <label for="fStatus">Status</label>
+        <select id="fStatus">
+          <option value="rencana">Rencana Baca</option>
+          <option value="dibaca">Sedang Dibaca</option>
+          <option value="selesai">Selesai</option>
+        </select>
+      </div>
+      <div>
+        <label for="fLokasi">Lokasi Penyimpanan</label>
+        <input id="fLokasi" type="text" placeholder="mis. Rak A, Lemari 2">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button id="addBtn">+ Tambah Buku</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <input type="search" id="searchBox" placeholder="Cari judul, penulis, atau lokasi…">
+    <button class="chip active" data-filter="semua">Semua</button>
+    <button class="chip" data-filter="rencana">Rencana</button>
+    <button class="chip" data-filter="dibaca">Dibaca</button>
+    <button class="chip" data-filter="selesai">Selesai</button>
+    <span style="flex:1"></span>
+    <div class="view-toggle">
+      <button class="chip active" id="viewCardBtn">🗂 Kartu</button>
+      <button class="chip" id="viewListBtn">📋 Daftar</button>
+    </div>
+  </div>
+
+  <div id="grid" class="loading">Memuat koleksi…</div>
+</div>
+
+<script>
+let books = [];
+let currentFilter = 'semua';
+let currentView = 'kartu';
+let loaded = false;
+
+const grid = document.getElementById('grid');
+const countLabel = document.getElementById('countLabel');
+
+document.getElementById('viewCardBtn').addEventListener('click', ()=>{
+  currentView = 'kartu';
+  document.getElementById('viewCardBtn').classList.add('active');
+  document.getElementById('viewListBtn').classList.remove('active');
+  render();
+});
+document.getElementById('viewListBtn').addEventListener('click', ()=>{
+  currentView = 'daftar';
+  document.getElementById('viewListBtn').classList.add('active');
+  document.getElementById('viewCardBtn').classList.remove('active');
+  render();
+});
+
+
+
+function loadBooks(){
+  // Versi mandiri: tidak ada penyimpanan otomatis di server.
+  books = [];
+  loaded = true;
+  render();
+}
+
+function saveBooks(){
+  // Tidak ada auto-save di versi mandiri.
+  // Gunakan tombol "Simpan Koleksi ke File" untuk menyimpan secara manual.
+}
+
+document.getElementById('exportXlsxBtn').addEventListener('click', ()=>{
+  if(books.length === 0){
+    alert('Belum ada buku untuk diekspor. Tambahkan buku terlebih dahulu.');
+    return;
+  }
+
+  const rows = books.map(b => ({
+    'Judul': b.title || '',
+    'Penulis': b.author || '',
+    'Genre': b.genre || '',
+    'Status': statusLabel(b.status),
+    'Lokasi Penyimpanan': b.lokasi || ''
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet['!cols'] = [
+    { wch: 28 }, // Judul
+    { wch: 22 }, // Penulis
+    { wch: 16 }, // Genre
+    { wch: 14 }, // Status
+    { wch: 20 }  // Lokasi
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Koleksi Buku');
+
+  const tanggal = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(workbook, `koleksi-buku-${tanggal}.xlsx`);
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const dataStr = JSON.stringify(books, null, 2);
+  const blob = new Blob([dataStr], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const tanggal = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `koleksi-buku-${tanggal}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data)) throw new Error('Format tidak sesuai');
+      books = data;
+      render();
+    }catch(err){
+      alert('Gagal membaca file. Pastikan ini adalah file JSON yang diekspor dari katalog ini.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('fTitle').value.trim();
+  const author = document.getElementById('fAuthor').value.trim();
+  const genre = document.getElementById('fGenre').value.trim();
+  const status = document.getElementById('fStatus').value;
+  const lokasi = document.getElementById('fLokasi').value.trim();
+
+  if(!title){
+    document.getElementById('fTitle').focus();
+    return;
+  }
+
+  books.unshift({
+    id: Date.now().toString(36),
+    title, author, genre, status, lokasi
+  });
+
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fAuthor').value = '';
+  document.getElementById('fGenre').value = '';
+  document.getElementById('fLokasi').value = '';
+  document.getElementById('fStatus').value = 'rencana';
+
+  render();
+  await saveBooks();
+});
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', render);
+
+async function removeBook(id){
+  books = books.filter(b=>b.id!==id);
+  render();
+  await saveBooks();
+}
+
+async function cycleStatus(id){
+  const order = ['rencana','dibaca','selesai'];
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  const idx = order.indexOf(b.status);
+  b.status = order[(idx+1)%order.length];
+  render();
+  await saveBooks();
+}
+
+function statusLabel(s){
+  return {rencana:'Rencana Baca', dibaca:'Sedang Dibaca', selesai:'Selesai'}[s] || s;
+}
+
+function render(){
+  if(!loaded){
+    grid.className = 'loading';
+    grid.textContent = 'Memuat koleksi…';
+    return;
+  }
+
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  let list = books.filter(b=>{
+    const matchFilter = currentFilter === 'semua' || b.status === currentFilter;
+    const matchSearch = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || (b.lokasi||'').toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+
+  countLabel.textContent = `${books.length} buku dalam koleksi`;
+
+  if(list.length === 0){
+    grid.className = 'empty';
+    grid.textContent = books.length === 0
+      ? 'Rak masih kosong. Tambahkan buku pertamamu di atas.'
+      : 'Tidak ada buku yang cocok dengan pencarian atau filter ini.';
+    return;
+  }
+
+  if(currentView === 'daftar'){
+    grid.className = '';
+    grid.innerHTML = `
+      <table class="book-table">
+        <thead>
+          <tr>
+            <th>Judul</th>
+            <th>Penulis</th>
+            <th>Genre</th>
+            <th>Status</th>
+            <th>Lokasi</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map(b=>`
+            <tr>
+              <td class="col-title">${escapeHtml(b.title)}</td>
+              <td class="col-author">${escapeHtml(b.author||'—')}</td>
+              <td>${escapeHtml(b.genre||'—')}</td>
+              <td><span class="status-badge status-${b.status}">${statusLabel(b.status)}</span></td>
+              <td>${b.lokasi ? '📍 '+escapeHtml(b.lokasi) : '—'}</td>
+              <td>
+                <div class="row-actions">
+                  <button class="link-btn" onclick="cycleStatus('${b.id}')">Ubah Status</button>
+                  <button class="link-btn" onclick="removeBook('${b.id}')">Hapus</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    return;
+  }
+
+  grid.className = 'grid';
+  grid.innerHTML = list.map(b=>`
+    <div class="book">
+      <div class="book-title">${escapeHtml(b.title)}</div>
+      ${b.author ? `<div class="book-author">${escapeHtml(b.author)}</div>` : ''}
+      ${b.genre ? `<div class="book-meta">${escapeHtml(b.genre)}</div>` : ''}
+      <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
+      ${b.lokasi ? `<div class="book-location">📍 ${escapeHtml(b.lokasi)}</div>` : ''}
+      <div class="book-actions">
+        <button class="link-btn" onclick="cycleStatus('${b.id}')">Ubah Status</button>
+        <button class="link-btn" onclick="removeBook('${b.id}')">Hapus</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+loadBooks();
+</script>
+</body>
+</html>

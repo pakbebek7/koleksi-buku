@@ -1,0 +1,29 @@
+[
+  {
+    "id": "mrbjjcl4",
+    "title": "buku002",
+    "author": "andrea hirata",
+    "genre": "",
+    "status": "rencana",
+    "lokasi": "",
+    "rating": 0
+  },
+  {
+    "id": "mrbispmf",
+    "title": "buku2",
+    "author": "",
+    "genre": "",
+    "status": "rencana",
+    "lokasi": "",
+    "rating": 0
+  },
+  {
+    "id": "mrbisjo8",
+    "title": "buku 1",
+    "author": "",
+    "genre": "",
+    "status": "selesai",
+    "lokasi": "",
+    "rating": 0
+  }
+]
