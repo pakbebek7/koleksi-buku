@@ -2,267 +2,350 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Katalog Koleksi Buku (Mandiri)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#EDE6D6;
-    --paper-dark:#E2D8C2;
-    --ink:#28324A;
-    --forest:#1F3A2E;
-    --forest-light:#2C4F3D;
-    --brass:#B08D57;
-    --brass-light:#C9A876;
-    --red-tab:#8C3B32;
+    --bg-1:#faf6ee;
+    --bg-2:#f2ecdd;
+    --surface:#ffffff;
+    --ink:#1f2937;
+    --ink-soft:#6b6255;
+    --emerald:#0f4c3a;
+    --emerald-light:#1a6b52;
+    --emerald-glow:#e4f0ea;
+    --gold:#c9973f;
+    --gold-light:#e8c789;
+    --terracotta:#c1544b;
+    --terracotta-light:#f4ded9;
+    --sky:#3b6e8f;
+    --sky-light:#dceaf1;
+    --border:#e7ddc8;
+    --shadow-sm:0 1px 2px rgba(31,41,55,0.06), 0 1px 1px rgba(31,41,55,0.04);
+    --shadow-md:0 4px 14px rgba(31,41,55,0.08), 0 2px 4px rgba(31,41,55,0.05);
+    --shadow-lg:0 12px 28px rgba(31,41,55,0.14), 0 4px 10px rgba(31,41,55,0.06);
+    --radius-sm:8px;
+    --radius-md:14px;
+    --radius-lg:20px;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    background:var(--paper);
-    background-image:
-      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(15,76,58,0.06), transparent 45%),
+      radial-gradient(circle at 88% 8%, rgba(201,151,63,0.10), transparent 40%),
+      var(--bg-1);
     color:var(--ink);
-    font-family:'Georgia', 'Iowan Old Style', serif;
+    font-family:'Inter', system-ui, sans-serif;
     min-height:100vh;
   }
-  .wrap{ max-width:920px; margin:0 auto; padding:36px 20px 60px; }
+  .wrap{ max-width:960px; margin:0 auto; padding:44px 24px 70px; }
 
   header{
     display:flex;
-    align-items:baseline;
+    align-items:flex-end;
     justify-content:space-between;
-    border-bottom:3px double var(--forest);
-    padding-bottom:14px;
-    margin-bottom:28px;
+    margin-bottom:32px;
     flex-wrap:wrap;
-    gap:8px;
+    gap:12px;
+    padding-bottom:22px;
+    position:relative;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:3px;
+    border-radius:3px;
+    background:linear-gradient(90deg, var(--emerald) 0%, var(--gold) 55%, var(--terracotta) 100%);
   }
   h1{
-    font-size:1.9rem;
-    letter-spacing:0.03em;
-    margin:0;
-    color:var(--forest);
+    font-family:'Fraunces', Georgia, serif;
+    font-size:2.1rem;
     font-weight:700;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+    color:var(--emerald);
+    line-height:1.1;
   }
   .subtitle{
-    font-family:'Courier New', monospace;
-    font-size:0.78rem;
-    letter-spacing:0.12em;
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.16em;
     text-transform:uppercase;
-    color:var(--brass);
+    color:var(--gold);
+    font-weight:500;
   }
   .count{
-    font-family:'Courier New', monospace;
-    font-size:0.85rem;
-    color:var(--forest-light);
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    background:var(--surface);
+    padding:6px 14px;
+    border-radius:999px;
+    box-shadow:var(--shadow-sm);
+    border:1px solid var(--border);
   }
 
   /* form card */
   .card-form{
-    background:var(--paper-dark);
-    border:1px solid var(--brass-light);
-    border-radius:2px;
-    padding:20px 22px;
-    margin-bottom:30px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:26px 28px;
+    margin-bottom:28px;
     position:relative;
-    box-shadow: 0 2px 0 rgba(0,0,0,0.04);
+    box-shadow:var(--shadow-md);
+    overflow:hidden;
   }
   .card-form::before{
     content:"";
-    position:absolute; left:0; top:14px; bottom:14px; width:4px;
-    background:var(--red-tab);
+    position:absolute; left:0; top:0; bottom:0; width:5px;
+    background:linear-gradient(180deg, var(--emerald), var(--emerald-light));
   }
   .form-grid{
     display:grid;
     grid-template-columns:2fr 1.3fr 1fr;
-    gap:12px 14px;
+    gap:14px 16px;
   }
   .form-grid .full{ grid-column:1/-1; }
   label{
     display:block;
-    font-family:'Courier New', monospace;
+    font-family:'JetBrains Mono', monospace;
     font-size:0.68rem;
     letter-spacing:0.08em;
     text-transform:uppercase;
-    color:var(--forest-light);
-    margin-bottom:4px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    font-weight:500;
   }
   input, select{
     width:100%;
-    font-family:Georgia, serif;
+    font-family:'Inter', sans-serif;
     font-size:0.95rem;
-    padding:8px 9px;
-    border:1px solid #b9ac8e;
-    border-radius:2px;
-    background:#FBF8F0;
+    padding:10px 12px;
+    border:1.5px solid var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--bg-1);
     color:var(--ink);
+    transition:border-color 0.15s ease, box-shadow 0.15s ease;
   }
   input:focus, select:focus{
-    outline:2px solid var(--forest-light);
-    outline-offset:1px;
+    outline:none;
+    border-color:var(--emerald-light);
+    box-shadow:0 0 0 3px var(--emerald-glow);
   }
   .form-actions{
-    margin-top:16px;
+    margin-top:20px;
     display:flex;
     justify-content:flex-end;
   }
   button{
-    font-family:'Courier New', monospace;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    font-size:0.8rem;
-    background:var(--forest);
-    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    letter-spacing:0.01em;
+    font-size:0.86rem;
+    background:var(--emerald);
+    color:#fff;
     border:none;
-    padding:10px 20px;
-    border-radius:2px;
+    padding:11px 22px;
+    border-radius:var(--radius-sm);
     cursor:pointer;
-    transition:background 0.15s ease;
+    transition:background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow:var(--shadow-sm);
   }
-  button:hover{ background:var(--forest-light); }
-  button:focus-visible{ outline:2px solid var(--brass); outline-offset:2px; }
+  button:hover{ background:var(--emerald-light); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+  button:active{ transform:translateY(0); }
+  button:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 
   .file-bar{
     display:flex;
     align-items:center;
     gap:10px;
     flex-wrap:wrap;
-    margin-bottom:22px;
+    margin-bottom:24px;
   }
   .file-label{
     display:inline-block;
   }
   .file-hint{
-    font-family:'Courier New', monospace;
-    font-size:0.68rem;
-    color:#8a7a5f;
-    font-style:italic;
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.7rem;
+    color:var(--ink-soft);
   }
 
   /* filters */
   .filters{
     display:flex;
     gap:8px;
-    margin-bottom:18px;
+    margin-bottom:20px;
     flex-wrap:wrap;
     align-items:center;
   }
   .filters input[type=search]{
     flex:1;
-    min-width:160px;
+    min-width:180px;
+    background:var(--surface);
+    box-shadow:var(--shadow-sm);
   }
   .chip{
-    font-family:'Courier New', monospace;
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.06em;
-    padding:7px 12px;
-    border:1px solid var(--forest-light);
-    border-radius:20px;
-    background:transparent;
-    color:var(--forest);
+    font-family:'Inter', sans-serif;
+    font-size:0.78rem;
+    font-weight:600;
+    letter-spacing:0.01em;
+    padding:9px 16px;
+    border:1.5px solid var(--border);
+    border-radius:999px;
+    background:var(--surface);
+    color:var(--emerald);
     cursor:pointer;
+    box-shadow:var(--shadow-sm);
+    transition:all 0.15s ease;
   }
+  .chip:hover{ border-color:var(--emerald-light); transform:translateY(-1px); }
   .chip.active{
-    background:var(--forest);
-    color:var(--paper);
+    background:var(--emerald);
+    border-color:var(--emerald);
+    color:#fff;
   }
 
   /* book grid */
   .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
-    gap:16px;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    gap:18px;
   }
   .book{
-    background:#FBF8F0;
-    border:1px solid #d8cba9;
-    border-radius:2px;
-    padding:16px 16px 14px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    padding:18px 18px 16px;
     position:relative;
-    box-shadow:0 1px 3px rgba(0,0,0,0.06);
+    box-shadow:var(--shadow-sm);
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:7px;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .book:hover{
+    transform:translateY(-3px);
+    box-shadow:var(--shadow-lg);
   }
   .book::before{
     content:"";
-    position:absolute; top:0; right:14px;
-    width:18px; height:24px;
-    background:var(--red-tab);
-    clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);
+    position:absolute; top:0; left:0; bottom:0; width:4px;
+    border-radius:var(--radius-md) 0 0 var(--radius-md);
+    background:linear-gradient(180deg, var(--gold), var(--terracotta));
   }
   .book-title{
-    font-size:1.05rem;
+    font-family:'Fraunces', Georgia, serif;
+    font-size:1.12rem;
     font-weight:700;
-    color:var(--forest);
-    padding-right:26px;
-    line-height:1.25;
+    color:var(--emerald);
+    line-height:1.28;
   }
   .book-author{
     font-style:italic;
     font-size:0.88rem;
-    color:#5b5040;
+    color:var(--ink-soft);
   }
   .book-meta{
-    font-family:'Courier New', monospace;
-    font-size:0.7rem;
-    letter-spacing:0.05em;
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.04em;
     text-transform:uppercase;
-    color:var(--brass);
+    color:var(--gold);
+    background:#fbf1de;
+    padding:2px 8px;
+    border-radius:6px;
     margin-top:2px;
+    width:fit-content;
   }
   .status-badge{
     align-self:flex-start;
-    font-family:'Courier New', monospace;
-    font-size:0.65rem;
-    letter-spacing:0.05em;
-    text-transform:uppercase;
-    padding:3px 8px;
-    border-radius:10px;
+    font-family:'Inter', sans-serif;
+    font-size:0.7rem;
+    font-weight:600;
+    letter-spacing:0.02em;
+    padding:4px 11px;
+    border-radius:999px;
     margin-top:4px;
   }
-  .status-dibaca{ background:#e4d9b8; color:#6b5223; }
-  .status-selesai{ background:#d8e6d9; color:var(--forest); }
-  .status-rencana{ background:#e6dcd0; color:#7a6a55; }
+  .status-dibaca{ background:var(--gold-light); color:#6b5223; }
+  .status-selesai{ background:var(--emerald-glow); color:var(--emerald); }
+  .status-rencana{ background:var(--sky-light); color:var(--sky); }
 
   .book-location{
-    font-family:'Courier New', monospace;
-    font-size:0.72rem;
-    color:#5b5040;
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.74rem;
+    color:var(--ink-soft);
     margin-top:2px;
   }
   .book-actions{
     margin-top:auto;
     display:flex;
     justify-content:flex-end;
-    gap:10px;
-    padding-top:8px;
+    gap:14px;
+    padding-top:10px;
+    border-top:1px solid var(--bg-2);
   }
   .link-btn{
     background:none;
     border:none;
-    color:#8a7a5f;
-    font-family:'Courier New', monospace;
-    font-size:0.68rem;
-    letter-spacing:0.05em;
-    text-transform:uppercase;
+    color:var(--ink-soft);
+    font-family:'Inter', sans-serif;
+    font-size:0.74rem;
+    font-weight:600;
+    letter-spacing:0.01em;
     cursor:pointer;
     padding:2px 0;
+    transition:color 0.15s ease;
   }
-  .link-btn:hover{ color:var(--red-tab); }
+  .link-btn:hover{ color:var(--terracotta); }
+
+  .editing-card{
+    gap:9px;
+  }
+  .editing-card label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.65rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:-4px;
+  }
+  .editing-card input{
+    width:100%;
+    font-size:0.9rem;
+    padding:7px 9px;
+  }
+  tr.editing-row td{
+    background:var(--emerald-glow);
+  }
+  tr.editing-row input{
+    width:100%;
+    font-size:0.88rem;
+    padding:6px 8px;
+  }
 
   .empty{
     text-align:center;
-    padding:50px 20px;
-    color:#8a7a5f;
-    font-style:italic;
+    padding:60px 20px;
+    color:var(--ink-soft);
+    background:var(--surface);
+    border:1px dashed var(--border);
+    border-radius:var(--radius-lg);
+    font-size:0.95rem;
   }
   .loading{
     text-align:center;
     padding:40px;
-    color:#8a7a5f;
-    font-family:'Courier New', monospace;
+    color:var(--ink-soft);
+    font-family:'JetBrains Mono', monospace;
     font-size:0.85rem;
   }
 
@@ -273,35 +356,96 @@
   }
   table.book-table{
     width:100%;
-    border-collapse:collapse;
-    background:#FBF8F0;
-    border:1px solid #d8cba9;
+    border-collapse:separate;
+    border-spacing:0;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    overflow:hidden;
+    box-shadow:var(--shadow-sm);
   }
   table.book-table th{
     text-align:left;
-    font-family:'Courier New', monospace;
+    font-family:'JetBrains Mono', monospace;
     font-size:0.68rem;
     letter-spacing:0.06em;
     text-transform:uppercase;
-    color:var(--paper);
-    background:var(--forest);
-    padding:9px 10px;
+    color:#fff;
+    background:var(--emerald);
+    padding:12px 14px;
   }
   table.book-table td{
-    padding:9px 10px;
-    border-bottom:1px solid #e6dcc4;
+    padding:12px 14px;
+    border-bottom:1px solid var(--bg-2);
     font-size:0.9rem;
     vertical-align:middle;
   }
   table.book-table tr:last-child td{ border-bottom:none; }
-  table.book-table tr:hover td{ background:#F4EFE1; }
-  table.book-table .col-title{ font-weight:700; color:var(--forest); }
-  table.book-table .col-author{ font-style:italic; color:#5b5040; }
+  table.book-table tr:hover td{ background:var(--bg-1); }
+  table.book-table .col-title{ font-family:'Fraunces', Georgia, serif; font-weight:700; color:var(--emerald); }
+  table.book-table .col-author{ font-style:italic; color:var(--ink-soft); }
   table.book-table .row-actions{
     display:flex;
-    gap:10px;
+    gap:12px;
     justify-content:flex-end;
     white-space:nowrap;
+  }
+
+  /* ===== Responsif untuk mobile ===== */
+  @media (max-width: 640px){
+    .wrap{ padding:24px 14px 44px; }
+    h1{ font-size:1.5rem; }
+    .subtitle{ font-size:0.66rem; }
+    .count{ font-size:0.72rem; padding:5px 12px; }
+
+    header{ gap:6px; }
+
+    .file-bar{ gap:8px; }
+    .file-bar .chip{ flex:1 1 auto; text-align:center; font-size:0.68rem; padding:9px 10px; }
+    .file-hint{ width:100%; order:99; }
+
+    .card-form{ padding:18px 16px; }
+    .form-grid{
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+    .form-grid .full{ grid-column:auto; }
+    .form-actions{ justify-content:stretch; }
+    .form-actions button{ width:100%; }
+
+    .filters{ gap:6px; }
+    .filters input[type=search]{ flex-basis:100%; order:-1; }
+    .chip{ font-size:0.7rem; padding:7px 12px; }
+    .view-toggle{ width:100%; justify-content:flex-start; }
+
+    .grid{
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+    .book{ padding:16px; }
+    .book:hover{ transform:none; }
+
+    /* Tabel jadi bisa digeser horizontal di layar sempit */
+    table.book-table{
+      display:block;
+      overflow-x:auto;
+      white-space:nowrap;
+      border-radius:var(--radius-sm);
+    }
+    table.book-table th, table.book-table td{
+      font-size:0.8rem;
+      padding:9px 10px;
+    }
+
+    .book-actions, .row-actions{
+      flex-wrap:wrap;
+      justify-content:flex-start;
+    }
+  }
+
+  @media (max-width: 400px){
+    h1{ font-size:1.3rem; }
+    .file-bar .chip{ font-size:0.62rem; padding:8px 9px; }
   }
 </style>
 </head>
@@ -773,6 +917,35 @@ async function cycleStatus(id){
   await saveBooks();
 }
 
+let editingId = null;
+
+function editBook(id){
+  editingId = id;
+  render();
+}
+
+function cancelEdit(){
+  editingId = null;
+  render();
+}
+
+async function saveEdit(id){
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  const newTitle = document.getElementById(`edit-title-${id}`).value.trim();
+  if(!newTitle){
+    alert('Judul tidak boleh kosong.');
+    return;
+  }
+  b.title = newTitle;
+  b.author = document.getElementById(`edit-author-${id}`).value.trim();
+  b.genre = document.getElementById(`edit-genre-${id}`).value.trim();
+  b.lokasi = document.getElementById(`edit-lokasi-${id}`).value.trim();
+  editingId = null;
+  render();
+  await saveBooks();
+}
+
 function statusLabel(s){
   return {rencana:'Rencana Baca', dibaca:'Sedang Dibaca', selesai:'Selesai'}[s] || s;
 }
@@ -816,7 +989,21 @@ function render(){
           </tr>
         </thead>
         <tbody>
-          ${list.map(b=>`
+          ${list.map(b=> b.id === editingId ? `
+            <tr class="editing-row">
+              <td><input type="text" id="edit-title-${b.id}" value="${escapeAttr(b.title)}"></td>
+              <td><input type="text" id="edit-author-${b.id}" value="${escapeAttr(b.author||'')}"></td>
+              <td><input type="text" id="edit-genre-${b.id}" value="${escapeAttr(b.genre||'')}"></td>
+              <td><span class="status-badge status-${b.status}">${statusLabel(b.status)}</span></td>
+              <td><input type="text" id="edit-lokasi-${b.id}" value="${escapeAttr(b.lokasi||'')}"></td>
+              <td>
+                <div class="row-actions">
+                  <button class="link-btn" onclick="saveEdit('${b.id}')">Simpan</button>
+                  <button class="link-btn" onclick="cancelEdit()">Batal</button>
+                </div>
+              </td>
+            </tr>
+          ` : `
             <tr>
               <td class="col-title">${escapeHtml(b.title)}</td>
               <td class="col-author">${escapeHtml(b.author||'—')}</td>
@@ -825,6 +1012,7 @@ function render(){
               <td>${b.lokasi ? '📍 '+escapeHtml(b.lokasi) : '—'}</td>
               <td>
                 <div class="row-actions">
+                  <button class="link-btn" onclick="editBook('${b.id}')">Edit</button>
                   <button class="link-btn" onclick="cycleStatus('${b.id}')">Ubah Status</button>
                   <button class="link-btn" onclick="removeBook('${b.id}')">Hapus</button>
                 </div>
@@ -838,7 +1026,22 @@ function render(){
   }
 
   grid.className = 'grid';
-  grid.innerHTML = list.map(b=>`
+  grid.innerHTML = list.map(b=> b.id === editingId ? `
+    <div class="book editing-card">
+      <label>Judul</label>
+      <input type="text" id="edit-title-${b.id}" value="${escapeAttr(b.title)}">
+      <label>Penulis</label>
+      <input type="text" id="edit-author-${b.id}" value="${escapeAttr(b.author||'')}">
+      <label>Genre</label>
+      <input type="text" id="edit-genre-${b.id}" value="${escapeAttr(b.genre||'')}">
+      <label>Lokasi Penyimpanan</label>
+      <input type="text" id="edit-lokasi-${b.id}" value="${escapeAttr(b.lokasi||'')}">
+      <div class="book-actions">
+        <button class="link-btn" onclick="saveEdit('${b.id}')">Simpan</button>
+        <button class="link-btn" onclick="cancelEdit()">Batal</button>
+      </div>
+    </div>
+  ` : `
     <div class="book">
       <div class="book-title">${escapeHtml(b.title)}</div>
       ${b.author ? `<div class="book-author">${escapeHtml(b.author)}</div>` : ''}
@@ -846,11 +1049,16 @@ function render(){
       <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
       ${b.lokasi ? `<div class="book-location">📍 ${escapeHtml(b.lokasi)}</div>` : ''}
       <div class="book-actions">
+        <button class="link-btn" onclick="editBook('${b.id}')">Edit</button>
         <button class="link-btn" onclick="cycleStatus('${b.id}')">Ubah Status</button>
         <button class="link-btn" onclick="removeBook('${b.id}')">Hapus</button>
       </div>
     </div>
   `).join('');
+}
+
+function escapeAttr(str){
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function escapeHtml(str){
