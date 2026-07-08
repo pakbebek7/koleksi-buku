@@ -1,5 +1,13 @@
 [
   {
+    "id": "mrc04pv0",
+    "title": "buku ke 2",
+    "author": "mikha",
+    "genre": "horor",
+    "status": "rencana",
+    "lokasi": "dus 21"
+  },
+  {
     "id": "mrbqjmn6",
     "title": "Harry Potter 01 - Batu Bertuah Sorceres Stone",
     "author": "JK Rowling",
