@@ -307,29 +307,95 @@
   }
   .link-btn:hover{ color:var(--terracotta); }
 
-  .editing-card{
-    gap:9px;
+  /* ===== Modal edit buku ===== */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(31,41,55,0.45);
+    backdrop-filter:blur(2px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+    padding:20px;
   }
-  .editing-card label{
-    font-family:'JetBrains Mono', monospace;
-    font-size:0.65rem;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    color:var(--ink-soft);
-    margin-bottom:-4px;
-  }
-  .editing-card input{
+  .modal-overlay.open{ display:flex; }
+  .modal-sheet{
+    background:var(--surface);
+    border-radius:var(--radius-lg);
+    padding:26px 26px 22px;
     width:100%;
+    max-width:440px;
+    max-height:88vh;
+    overflow-y:auto;
+    box-shadow:var(--shadow-lg);
+    position:relative;
+  }
+  .modal-handle{ display:none; }
+  .modal-title{
+    font-family:'Fraunces', Georgia, serif;
+    font-size:1.35rem;
+    font-weight:700;
+    color:var(--emerald);
+    margin:0 0 18px;
+  }
+  .modal-field{ margin-bottom:16px; }
+  .modal-field label{ margin-bottom:6px; }
+  .modal-field input{ font-size:1rem; padding:12px 13px; }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:20px;
+  }
+  .modal-btn-primary, .modal-btn-secondary{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
     font-size:0.9rem;
-    padding:7px 9px;
+    padding:12px 20px;
+    border-radius:var(--radius-sm);
+    border:none;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.1s ease;
   }
-  tr.editing-row td{
-    background:var(--emerald-glow);
+  .modal-btn-primary{
+    background:var(--emerald);
+    color:#fff;
+    box-shadow:var(--shadow-sm);
   }
-  tr.editing-row input{
-    width:100%;
-    font-size:0.88rem;
-    padding:6px 8px;
+  .modal-btn-primary:hover{ background:var(--emerald-light); }
+  .modal-btn-secondary{
+    background:var(--bg-2);
+    color:var(--ink-soft);
+  }
+  .modal-btn-secondary:hover{ background:var(--border); }
+
+  @media (max-width: 640px){
+    .modal-overlay{ align-items:flex-end; padding:0; }
+    .modal-sheet{
+      max-width:100%;
+      max-height:92vh;
+      border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+      padding:14px 20px calc(20px + env(safe-area-inset-bottom));
+    }
+    .modal-handle{
+      display:block;
+      width:40px; height:4px;
+      border-radius:4px;
+      background:var(--border);
+      margin:0 auto 16px;
+    }
+    .modal-title{ font-size:1.2rem; }
+    .modal-field input{ font-size:16px; padding:13px 14px; } /* 16px cegah auto-zoom iOS */
+    .modal-actions{
+      flex-direction:column-reverse;
+      gap:10px;
+    }
+    .modal-btn-primary, .modal-btn-secondary{
+      width:100%;
+      padding:14px 20px;
+      font-size:0.95rem;
+    }
   }
 
   .empty{
@@ -544,6 +610,33 @@
   </div>
 
   <div id="grid" class="loading">Memuat koleksi…</div>
+</div>
+
+<div class="modal-overlay" id="editOverlay">
+  <div class="modal-sheet" id="editSheet">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">Edit Buku</h2>
+    <div class="modal-field">
+      <label for="editModalTitle">Judul</label>
+      <input type="text" id="editModalTitle" placeholder="Judul buku">
+    </div>
+    <div class="modal-field">
+      <label for="editModalAuthor">Penulis</label>
+      <input type="text" id="editModalAuthor" placeholder="Nama penulis">
+    </div>
+    <div class="modal-field">
+      <label for="editModalGenre">Genre</label>
+      <input type="text" id="editModalGenre" placeholder="mis. Fiksi">
+    </div>
+    <div class="modal-field">
+      <label for="editModalLokasi">Lokasi Penyimpanan</label>
+      <input type="text" id="editModalLokasi" placeholder="mis. Rak A, Lemari 2">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn-secondary" id="modalCancelBtn">Batal</button>
+      <button class="modal-btn-primary" id="modalSaveBtn">Simpan Perubahan</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -918,33 +1011,52 @@ async function cycleStatus(id){
 }
 
 let editingId = null;
+const editOverlay = document.getElementById('editOverlay');
 
 function editBook(id){
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
   editingId = id;
-  render();
+  document.getElementById('editModalTitle').value = b.title || '';
+  document.getElementById('editModalAuthor').value = b.author || '';
+  document.getElementById('editModalGenre').value = b.genre || '';
+  document.getElementById('editModalLokasi').value = b.lokasi || '';
+  editOverlay.classList.add('open');
+  document.getElementById('editModalTitle').focus();
 }
 
 function cancelEdit(){
   editingId = null;
-  render();
+  editOverlay.classList.remove('open');
 }
 
-async function saveEdit(id){
+async function saveEdit(){
+  const id = editingId;
   const b = books.find(x=>x.id===id);
   if(!b) return;
-  const newTitle = document.getElementById(`edit-title-${id}`).value.trim();
+  const newTitle = document.getElementById('editModalTitle').value.trim();
   if(!newTitle){
-    alert('Judul tidak boleh kosong.');
+    document.getElementById('editModalTitle').focus();
     return;
   }
   b.title = newTitle;
-  b.author = document.getElementById(`edit-author-${id}`).value.trim();
-  b.genre = document.getElementById(`edit-genre-${id}`).value.trim();
-  b.lokasi = document.getElementById(`edit-lokasi-${id}`).value.trim();
+  b.author = document.getElementById('editModalAuthor').value.trim();
+  b.genre = document.getElementById('editModalGenre').value.trim();
+  b.lokasi = document.getElementById('editModalLokasi').value.trim();
   editingId = null;
+  editOverlay.classList.remove('open');
   render();
   await saveBooks();
 }
+
+document.getElementById('modalSaveBtn').addEventListener('click', saveEdit);
+document.getElementById('modalCancelBtn').addEventListener('click', cancelEdit);
+editOverlay.addEventListener('click', (e)=>{
+  if(e.target === editOverlay) cancelEdit();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && editOverlay.classList.contains('open')) cancelEdit();
+});
 
 function statusLabel(s){
   return {rencana:'Rencana Baca', dibaca:'Sedang Dibaca', selesai:'Selesai'}[s] || s;
@@ -989,21 +1101,7 @@ function render(){
           </tr>
         </thead>
         <tbody>
-          ${list.map(b=> b.id === editingId ? `
-            <tr class="editing-row">
-              <td><input type="text" id="edit-title-${b.id}" value="${escapeAttr(b.title)}"></td>
-              <td><input type="text" id="edit-author-${b.id}" value="${escapeAttr(b.author||'')}"></td>
-              <td><input type="text" id="edit-genre-${b.id}" value="${escapeAttr(b.genre||'')}"></td>
-              <td><span class="status-badge status-${b.status}">${statusLabel(b.status)}</span></td>
-              <td><input type="text" id="edit-lokasi-${b.id}" value="${escapeAttr(b.lokasi||'')}"></td>
-              <td>
-                <div class="row-actions">
-                  <button class="link-btn" onclick="saveEdit('${b.id}')">Simpan</button>
-                  <button class="link-btn" onclick="cancelEdit()">Batal</button>
-                </div>
-              </td>
-            </tr>
-          ` : `
+          ${list.map(b=>`
             <tr>
               <td class="col-title">${escapeHtml(b.title)}</td>
               <td class="col-author">${escapeHtml(b.author||'—')}</td>
@@ -1026,22 +1124,7 @@ function render(){
   }
 
   grid.className = 'grid';
-  grid.innerHTML = list.map(b=> b.id === editingId ? `
-    <div class="book editing-card">
-      <label>Judul</label>
-      <input type="text" id="edit-title-${b.id}" value="${escapeAttr(b.title)}">
-      <label>Penulis</label>
-      <input type="text" id="edit-author-${b.id}" value="${escapeAttr(b.author||'')}">
-      <label>Genre</label>
-      <input type="text" id="edit-genre-${b.id}" value="${escapeAttr(b.genre||'')}">
-      <label>Lokasi Penyimpanan</label>
-      <input type="text" id="edit-lokasi-${b.id}" value="${escapeAttr(b.lokasi||'')}">
-      <div class="book-actions">
-        <button class="link-btn" onclick="saveEdit('${b.id}')">Simpan</button>
-        <button class="link-btn" onclick="cancelEdit()">Batal</button>
-      </div>
-    </div>
-  ` : `
+  grid.innerHTML = list.map(b=>`
     <div class="book">
       <div class="book-title">${escapeHtml(b.title)}</div>
       ${b.author ? `<div class="book-author">${escapeHtml(b.author)}</div>` : ''}
